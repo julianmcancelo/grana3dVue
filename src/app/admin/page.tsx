@@ -37,6 +37,14 @@ export default function AdminPage() {
   const [couponForm, setCouponForm] = useState({ code: '', discount: '', active: true, maxUses: '', expiresAt: '', minPurchase: '', variant: 'standard' as 'standard' | 'post-purchase' });
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
 
+  // ML Import state
+  const [showMLImport, setShowMLImport] = useState(false);
+  const [mlItems, setMlItems] = useState<any[]>([]);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlSelected, setMlSelected] = useState<string[]>([]);
+  const [mlImporting, setMlImporting] = useState(false);
+  const [mlToken, setMlToken] = useState('');
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -63,6 +71,61 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ML Import functions
+  const loadMLItems = async () => {
+    setMlLoading(true);
+    try {
+      const res = await fetch(`/api/ml-import?action=preview&token=${mlToken}`);
+      const data = await res.json();
+      if (data.items) {
+        setMlItems(data.items);
+        setMlSelected([]);
+      } else {
+        alert(data.error || 'Error al cargar productos');
+      }
+    } catch {
+      alert('Error de conexion');
+    } finally {
+      setMlLoading(false);
+    }
+  };
+
+  const toggleMLItem = (mlId: string) => {
+    setMlSelected(prev => prev.includes(mlId) ? prev.filter(i => i !== mlId) : [...prev, mlId]);
+  };
+
+  const selectAllML = () => {
+    if (mlSelected.length === mlItems.length) setMlSelected([]);
+    else setMlItems.map(i => i.mlId);
+  };
+
+  const importMLItems = async () => {
+    if (mlSelected.length === 0) return;
+    setMlImporting(true);
+    try {
+      const selectedItems = mlItems.filter(i => mlSelected.includes(i.mlId));
+      const res = await fetch('/api/ml-import?action=import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: selectedItems }),
+      });
+      const data = await res.json();
+      if (data.count > 0) {
+        alert(`${data.count} productos importados`);
+        setShowMLImport(false);
+        setMlItems([]);
+        setMlSelected([]);
+        await fetchData();
+      } else {
+        alert('No se importaron productos (ya existen o error)');
+      }
+    } catch {
+      alert('Error al importar');
+    } finally {
+      setMlImporting(false);
+    }
+  };
 
   // Dashboard calculations
   const approvedOrders = orders.filter(o => o.status === 'approved');
@@ -472,15 +535,26 @@ export default function AdminPage() {
                 <p className="text-sm text-[var(--warning)] font-medium">{lowStockProducts.length} {lowStockProducts.length === 1 ? 'producto con stock bajo' : 'productos con stock bajo'}</p>
               </div>
             )}
-            <button
-              onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', price: '', stock: '', image: '' }); setImagePreview(''); setShowProductForm(!showProductForm); }}
-              className="mb-5 px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors inline-flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-              </svg>
-              {showProductForm ? 'Cancelar' : 'Nuevo producto'}
-            </button>
+            <div className="flex flex-wrap gap-3 mb-5">
+              <button
+                onClick={() => { setEditingProduct(null); setProductForm({ name: '', description: '', price: '', stock: '', image: '' }); setImagePreview(''); setShowProductForm(!showProductForm); }}
+                className="px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                </svg>
+                {showProductForm ? 'Cancelar' : 'Nuevo producto'}
+              </button>
+              <button
+                onClick={() => setShowMLImport(!showMLImport)}
+                className="px-4 py-2 rounded-full bg-[#FFE600] text-[#333] text-sm font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                </svg>
+                Importar desde ML
+              </button>
+            </div>
 
             {showProductForm && (
               <div className="bg-white border border-[var(--border)] rounded-xl p-5 mb-5">
@@ -1351,6 +1425,112 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ML Import Modal */}
+      {showMLImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowMLImport(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-[var(--border)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#FFE600] flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#333]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text)]">Importar desde Mercado Libre</h3>
+                  <p className="text-xs text-[var(--text-muted)]">Selecciona los productos que quieras importar</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMLImport(false)} className="p-2 rounded-lg hover:bg-[var(--bg-soft)] text-[var(--text-muted)]">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+              {!mlToken ? (
+                <div className="p-5">
+                  <p className="text-sm text-[var(--text-secondary)] mb-3">Ingresá tu access token de Mercado Libre:</p>
+                  <textarea
+                    value={mlToken}
+                    onChange={e => setMlToken(e.target.value)}
+                    placeholder="APP_USR-..."
+                    rows={3}
+                    className="w-full border border-[var(--border)] rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-[var(--accent)] resize-none"
+                  />
+                  <button
+                    onClick={loadMLItems}
+                    disabled={!mlToken.trim() || mlLoading}
+                    className="mt-3 w-full py-2.5 rounded-full bg-[#FFE600] text-[#333] font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {mlLoading ? 'Cargando...' : 'Cargar productos'}
+                  </button>
+                </div>
+              ) : mlItems.length === 0 ? (
+                <div className="p-8 text-center text-[var(--text-muted)]">
+                  <p className="text-sm">No se encontraron productos</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="px-5 py-3 border-b border-[var(--border)] bg-[var(--bg-soft)] flex items-center justify-between">
+                    <button onClick={selectAllML} className="text-xs text-[var(--accent)] hover:underline">
+                      {mlSelected.length === mlItems.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                    </button>
+                    <span className="text-xs text-[var(--text-muted)]">{mlSelected.length} seleccionados</span>
+                  </div>
+                  <div className="divide-y divide-[var(--border)]">
+                    {mlItems.map(item => (
+                      <div key={item.mlId} className="flex items-center gap-3 p-4 hover:bg-[var(--bg-soft)] transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={mlSelected.includes(item.mlId)}
+                          onChange={() => toggleMLItem(item.mlId)}
+                          className="w-4 h-4 rounded accent-[var(--accent)] flex-shrink-0"
+                        />
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--bg-muted)] flex-shrink-0">
+                          {item.mainImage ? (
+                            <img src={item.mainImage} alt={item.title} className="w-full h-full object-cover"/>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <svg className="w-5 h-5 text-[var(--text-muted)]/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"/>
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[var(--text)] truncate">{item.title}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{item.stock} disponibles · ${item.price.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {mlItems.length > 0 && (
+              <div className="p-5 border-t border-[var(--border)] flex gap-3">
+                <button
+                  onClick={() => { setMlToken(''); setMlItems([]); setMlSelected([]); }}
+                  className="flex-1 py-2.5 rounded-full border border-[var(--border)] text-sm font-medium hover:bg-[var(--bg-soft)] transition-colors"
+                >
+                  Cambiar token
+                </button>
+                <button
+                  onClick={importMLItems}
+                  disabled={mlSelected.length === 0 || mlImporting}
+                  className="flex-1 py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+                >
+                  {mlImporting ? 'Importando...' : `Importar ${mlSelected.length} productos`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
