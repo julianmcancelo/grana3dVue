@@ -3,18 +3,45 @@
 import { useState, useEffect } from 'react';
 
 const WHATSAPP_OPTIONS = [
-  { icon: '🛒', label: 'Hacer un pedido', desc: 'Consultar productos disponibles', text: 'Hola! Quiero hacer un pedido. ¿Qué productos tienen disponibles?' },
-  { icon: '📦', label: 'Consulta de producto', desc: 'Detalles, materiales, medidas', text: 'Hola! Tengo una consulta sobre un producto de la tienda. ¿Me pueden ayudar?' },
-  { icon: '🏢', label: 'Compras mayoristas', desc: 'Precios por cantidad', text: 'Hola! Me interesan las compras mayoristas. ¿Tienen precios especiales por cantidad?' },
-  { icon: '🔧', label: 'Pedido personalizado', desc: 'Impresión 3D a medida', text: 'Hola! Quiero hacer un pedido personalizado de impresión 3D. ¿Qué necesitan saber?' },
-  { icon: '📍', label: 'Consulta de envío', desc: 'Zonas y tiempos de entrega', text: 'Hola! Quiero consultar sobre los envíos. ¿A qué zonas llegan y cuánto tarda?' },
-  { icon: '💬', label: 'Otra consulta', desc: 'Escribí tu mensaje', text: '' },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>, 
+    label: 'Hacer un pedido', desc: 'Consultar productos disponibles', text: 'Hola! Quiero hacer un pedido. ¿Qué productos tienen disponibles?' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>, 
+    label: 'Consulta de producto', desc: 'Detalles, materiales, medidas', text: 'Hola! Tengo una consulta sobre un producto de la tienda. ¿Me pueden ayudar?' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h13.5"/></svg>, 
+    label: 'Compras mayoristas', desc: 'Precios por cantidad', text: 'Hola! Me interesan las compras mayoristas. ¿Tienen precios especiales por cantidad?' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42"/></svg>, 
+    label: 'Pedido personalizado', desc: 'Impresión 3D a medida', text: 'Hola! Quiero hacer un pedido personalizado de impresión 3D. ¿Qué necesitan saber?' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.125a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>, 
+    label: 'Consulta de envío', desc: 'Zonas y tiempos de entrega', text: 'Hola! Quiero consultar sobre los envíos. ¿A qué zonas llegan y cuánto tarda?' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#25D366]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>, 
+    label: 'Otra consulta', desc: 'Escribí tu mensaje', text: '' 
+  },
 ];
 
 const IG_OPTIONS = [
-  { icon: '📷', label: 'Seguir en Instagram', desc: 'Enterate de novedades primero', url: 'https://instagram.com/grana.3d' },
-  { icon: '💬', label: 'Enviar mensaje directo', desc: 'Escribinos por DM', url: 'https://ig.me/m/grana.3d' },
-  { icon: '🛍️', label: 'Ver productos', desc: 'Mirá nuestro catálogo', url: 'https://instagram.com/grana.3d' },
+  { 
+    icon: <svg className="w-6 h-6 text-[#E1306C]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>, 
+    label: 'Seguir en Instagram', desc: 'Enterate de novedades primero', url: 'https://instagram.com/grana.3d' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#E1306C]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>, 
+    label: 'Enviar mensaje directo', desc: 'Escribinos por DM', url: 'https://ig.me/m/grana.3d' 
+  },
+  { 
+    icon: <svg className="w-6 h-6 text-[#E1306C]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>, 
+    label: 'Ver productos', desc: 'Mirá nuestro catálogo', url: 'https://instagram.com/grana.3d' 
+  },
 ];
 
 export default function LandingPage() {
