@@ -55,53 +55,58 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (action === 'import') {
-      const body = await request.json();
-      const { items } = body;
-
-      if (!items || items.length === 0) {
-        return NextResponse.json({ error: 'No hay items para importar' }, { status: 400 });
-      }
-
-      const imported = [];
-      const skipped = [];
-
-      for (const item of items) {
-        // Check if already imported
-        const existing = await adminDb.collection('products')
-          .where('mlId', '==', item.mlId)
-          .get();
-
-        if (!existing.empty) {
-          skipped.push(item.title);
-          continue;
-        }
-
-        const docRef = await adminDb.collection('products').add({
-          name: item.title,
-          description: item.description,
-          price: item.price,
-          stock: item.stock,
-          image: item.mainImage,
-          images: item.images,
-          mlId: item.mlId,
-          mlPermalink: item.permalink,
-          createdAt: new Date().toISOString(),
-        });
-
-        imported.push({ id: docRef.id, name: item.title });
-      }
-
-      return NextResponse.json({
-        imported,
-        skipped,
-        count: imported.length,
-      });
-    }
-
     return NextResponse.json({ error: 'Accion invalida' }, { status: 400 });
   } catch (error: any) {
     console.error('ML Import error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { items } = body;
+
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: 'No hay items para importar' }, { status: 400 });
+    }
+
+    const imported = [];
+    const skipped = [];
+
+    for (const item of items) {
+      // Check if already imported
+      const existing = await adminDb.collection('products')
+        .where('mlId', '==', item.mlId)
+        .get();
+
+      if (!existing.empty) {
+        skipped.push(item.title);
+        continue;
+      }
+
+      const docRef = await adminDb.collection('products').add({
+        name: item.title,
+        description: item.description,
+        price: item.price,
+        stock: item.stock,
+        image: item.mainImage,
+        images: item.images,
+        mlId: item.mlId,
+        mlPermalink: item.permalink,
+        createdAt: new Date().toISOString(),
+      });
+
+      imported.push({ id: docRef.id, name: item.title });
+    }
+
+    return NextResponse.json({
+      imported,
+      skipped,
+      count: imported.length,
+    });
+  } catch (error: any) {
+    console.error('ML Import POST error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
