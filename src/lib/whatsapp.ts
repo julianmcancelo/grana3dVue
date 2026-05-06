@@ -5,6 +5,7 @@ const WHATSAPP_BASE_URL = 'https://graph.facebook.com/v18.0';
 interface OrderData {
   id: string;
   customerName: string;
+  customerEmail?: string;
   customerPhone?: string;
   items: { name: string; quantity: number; price: number }[];
   total: number;
