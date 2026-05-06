@@ -97,7 +97,7 @@ export default function AdminPage() {
 
   const selectAllML = () => {
     if (mlSelected.length === mlItems.length) setMlSelected([]);
-    else setMlItems.map(i => i.mlId);
+    else setMlSelected(mlItems.map(i => i.mlId));
   };
 
   const importMLItems = async () => {
