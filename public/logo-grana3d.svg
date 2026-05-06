@@ -1,0 +1,13 @@
+<!-- Logo placeholder - reemplazar con logo-grana3d.png oficial -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <g transform="translate(0, 5)">
+    <polygon points="25,0 45,12 25,24" fill="#e17055"/>
+    <polygon points="25,24 5,12 25,0" fill="#6c5ce7"/>
+    <polygon points="25,24 45,12 45,36 25,48" fill="#00cec9"/>
+    <polygon points="25,24 5,12 5,36 25,48" fill="#6c5ce7" opacity="0.6"/>
+    <polygon points="25,48 45,36 25,24" fill="#00cec9" opacity="0.6"/>
+    <polygon points="25,48 5,36 25,24" fill="#e17055" opacity="0.4"/>
+  </g>
+  <text x="55" y="38" font-family="system-ui, sans-serif" font-weight="800" font-size="28" fill="#2d3436" letter-spacing="-0.5">GRANA</text>
+  <text x="148" y="38" font-family="system-ui, sans-serif" font-weight="800" font-size="28" fill="#d63031" letter-spacing="-0.5">3D</text>
+</svg>

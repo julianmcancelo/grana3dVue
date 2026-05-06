@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #ffffff;
+  --bg-soft: #f8f9fa;
+  --bg-muted: #f1f3f5;
+  --border: #e9ecef;
+  --border-hover: #dee2e6;
+  --text: #2d3436;
+  --text-secondary: #636e72;
+  --text-muted: #b2bec3;
+  --accent: #e17055;
+  --accent-hover: #d35400;
+  --accent-soft: rgba(225, 112, 85, 0.08);
+  --accent-border: rgba(225, 112, 85, 0.15);
+  --success: #00b894;
+  --success-soft: rgba(0, 184, 148, 0.08);
+  --danger: #d63031;
+  --danger-soft: rgba(214, 48, 49, 0.08);
+  --warning: #fdcb6e;
+  --warning-soft: rgba(253, 203, 110, 0.15);
+  --brand-orange: #e17055;
+  --brand-teal: #00cec9;
+  --brand-purple: #6c5ce7;
+  --brand-red: #d63031;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent);
+  color: white;
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+  header, footer, nav, button, a, .no-print {
+    display: none !important;
+  }
+  .print-card {
+    display: none !important;
+  }
+  #thank-you-card-preview {
+    display: block !important;
+    position: static !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 65mm !important;
+    margin: 0 auto !important;
+  }
+  @page {
+    margin: 2mm;
+    size: 65mm 90mm;
+  }
 }
