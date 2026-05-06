@@ -27,10 +27,11 @@ export async function GET(request: NextRequest) {
       });
       const itemsData = await itemsRes.json();
 
-      // Fetch full details for each item (limit 20 to avoid rate limits)
+      // ML search returns array of strings (IDs), fetch full details for each
+      const itemIds = (itemsData.results || []).slice(0, 20);
       const items = await Promise.all(
-        (itemsData.results || []).slice(0, 20).map(async (item: any) => {
-          const detailRes = await fetch(`${ML_API}/items/${item.id}`, {
+        itemIds.map(async (itemId: string) => {
+          const detailRes = await fetch(`${ML_API}/items/${itemId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           return detailRes.json();
