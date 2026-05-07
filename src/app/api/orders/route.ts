@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const orderId = searchParams.get('id');
     const dni = searchParams.get('dni');
     const email = searchParams.get('email');
+    const status = searchParams.get('status');
 
     if (orderId) {
       const doc = await adminDb.collection('orders').doc(orderId).get();
@@ -16,38 +17,67 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ id: doc.id, ...doc.data() });
     }
 
+    let query: any = adminDb.collection('orders');
+    
+    if (status && status !== 'all') {
+      query = query.where('status', '==', status);
+    }
+    
     if (email) {
-      const snap = await adminDb.collection('orders')
-        .where('customerEmail', '==', email)
-        .get();
-      const orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      orders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return NextResponse.json(orders);
-    }
-
-    if (dni) {
+      query = query.where('customerEmail', '==', email);
+    } else if (dni) {
       try {
-        const snap = await adminDb.collection('orders')
-          .where('customerDni', '==', dni)
-          .orderBy('createdAt', 'desc')
-          .get();
-        return NextResponse.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err: any) {
-        if (err.code === 'failed-precondition' || err.message?.includes('index')) {
-          const fallbackSnap = await adminDb.collection('orders')
-            .where('customerDni', '==', dni)
-            .get();
-          const orders = fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          orders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          return NextResponse.json(orders);
-        }
-        throw err;
+        query = query.where('customerDni', '==', dni).orderBy('createdAt', 'desc');
+      } catch {
+        query = query.where('customerDni', '==', dni);
       }
+    } else {
+      query = query.orderBy('createdAt', 'desc');
     }
 
-    const snap = await adminDb.collection('orders').orderBy('createdAt', 'desc').get();
-    return NextResponse.json(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const snap = await query.get();
+    const orders = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    if (!email && !dni) {
+      orders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    return NextResponse.json(orders);
   } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
+    }
+
+    const orderRef = adminDb.collection('orders').doc(id);
+    const orderDoc = await orderRef.get();
+    
+    if (!orderDoc.exists) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Build update object with updatedAt
+    const updateData: any = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // If status changed to approved, set trackingStatus to confirmed if not set
+    if (updates.status === 'approved' && !orderDoc.data()?.trackingStatus) {
+      updateData.trackingStatus = 'confirmed';
+    }
+
+    await orderRef.update(updateData);
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Order update error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

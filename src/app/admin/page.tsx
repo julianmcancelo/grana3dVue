@@ -45,6 +45,15 @@ export default function AdminPage() {
   const [mlImporting, setMlImporting] = useState(false);
   const [mlToken, setMlToken] = useState('');
 
+  // Order management state
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orderFilter, setOrderFilter] = useState<string>('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderTrackingCode, setOrderTrackingCode] = useState('');
+  const [orderCourier, setOrderCourier] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [updatingOrder, setUpdatingOrder] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -126,6 +135,69 @@ export default function AdminPage() {
       setMlImporting(false);
     }
   };
+
+  // Order management functions
+  const openOrderDetail = (order: Order) => {
+    setSelectedOrder(order);
+    setOrderTrackingCode((order as any).trackingCode || '');
+    setOrderCourier((order as any).courier || '');
+    setOrderNotes((order as any).notes || '');
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    setUpdatingOrder(true);
+    try {
+      await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, status }),
+      });
+      await fetchData();
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, status: status as any } : null);
+      }
+    } catch {
+      alert('Error al actualizar estado');
+    } finally {
+      setUpdatingOrder(false);
+    }
+  };
+
+  const updateOrderTracking = async () => {
+    if (!selectedOrder) return;
+    setUpdatingOrder(true);
+    try {
+      await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedOrder.id,
+          trackingCode: orderTrackingCode,
+          courier: orderCourier,
+          notes: orderNotes,
+        }),
+      });
+      await fetchData();
+      setSelectedOrder(prev => prev ? { ...prev, trackingCode: orderTrackingCode, courier: orderCourier, notes: orderNotes } as any : null);
+    } catch {
+      alert('Error al actualizar seguimiento');
+    } finally {
+      setUpdatingOrder(false);
+    }
+  };
+
+  const filteredOrders = orders.filter(o => {
+    if (orderFilter !== 'all' && o.status !== orderFilter) return false;
+    if (orderSearch) {
+      const s = orderSearch.toLowerCase();
+      const id = o.id.slice(-6).toLowerCase();
+      const name = (o.customerName || '').toLowerCase();
+      const email = (o.customerEmail || '').toLowerCase();
+      const dni = (o.customerDni || '').toLowerCase();
+      if (!id.includes(s) && !name.includes(s) && !email.includes(s) && !dni.includes(s)) return false;
+    }
+    return true;
+  });
 
   // Dashboard calculations
   const approvedOrders = orders.filter(o => o.status === 'approved');
@@ -857,15 +929,52 @@ export default function AdminPage() {
 
         {/* Orders */}
         {activeTab === 'orders' && (
-          <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden">
-            {orders.length === 0 ? (
-              <div className="text-center py-16 text-[var(--text-muted)]">
-                <p className="text-sm">No hay órdenes</p>
+          <div>
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { value: 'all', label: 'Todas', count: orders.length },
+                  { value: 'pending', label: 'Pendientes', count: orders.filter(o => o.status === 'pending').length },
+                  { value: 'approved', label: 'Aprobadas', count: orders.filter(o => o.status === 'approved').length },
+                  { value: 'rejected', label: 'Rechazadas', count: orders.filter(o => o.status === 'rejected').length },
+                ].map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setOrderFilter(f.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      orderFilter === f.value
+                        ? 'bg-[var(--accent)] text-white'
+                        : 'bg-[var(--bg-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]'
+                    }`}
+                  >
+                    {f.label} ({f.count})
+                  </button>
+                ))}
+              </div>
+              <div className="relative flex-1 sm:max-w-xs">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input
+                  type="text"
+                  value={orderSearch}
+                  onChange={e => setOrderSearch(e.target.value)}
+                  placeholder="Buscar por ID, nombre, email, DNI..."
+                  className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                />
+              </div>
+            </div>
+
+            {/* Order List */}
+            {filteredOrders.length === 0 ? (
+              <div className="bg-white border border-[var(--border)] rounded-xl text-center py-16 text-[var(--text-muted)]">
+                <p className="text-sm">{orders.length === 0 ? 'No hay órdenes' : 'No se encontraron resultados'}</p>
               </div>
             ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {orders.map(order => (
-                  <div key={order.id} className="p-4 hover:bg-[var(--bg-soft)] transition-colors">
+              <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden divide-y divide-[var(--border)]">
+                {filteredOrders.map(order => (
+                  <div key={order.id} className="p-4 hover:bg-[var(--bg-soft)] transition-colors cursor-pointer" onClick={() => openOrderDetail(order)}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-xs text-[var(--text-muted)]">#{order.id.slice(-6)}</span>
                       <span className="text-xs text-[var(--text-muted)]">
@@ -875,7 +984,7 @@ export default function AdminPage() {
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {order.items.map((item, i) => (
                         <span key={i} className="text-xs bg-[var(--bg-soft)] border border-[var(--border)] px-2.5 py-1 rounded-full">
-                          {item.name} × {item.quantity}
+                          {item.name} x {item.quantity}
                         </span>
                       ))}
                     </div>
@@ -891,33 +1000,186 @@ export default function AdminPage() {
                         {order.discount > 0 && (
                           <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent)] px-2.5 py-1 rounded-full">-{order.discount}%</span>
                         )}
-                        {order.status === 'approved' && (
-                          <select
-                            value={order.trackingStatus || ''}
-                            onChange={async (e) => {
-                              if (e.target.value) {
-                                await fetch('/api/orders/tracking', {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: order.id, trackingStatus: e.target.value }),
-                                });
-                                await fetchData();
-                              }
-                            }}
-                            className="text-xs bg-[var(--bg-soft)] border border-[var(--border)] rounded-full px-2.5 py-1 text-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                          >
-                            <option value="">Sin tracking</option>
-                            <option value="confirmed">Confirmado</option>
-                            <option value="preparing">En preparación</option>
-                            <option value="shipped">En camino</option>
-                            <option value="delivered">Entregado</option>
-                          </select>
+                        {(order as any).trackingCode && (
+                          <span className="text-xs bg-[var(--accent-soft)] text-[var(--accent)] px-2.5 py-1 rounded-full">
+                            {(order as any).courier || 'Envío'}: {(order as any).trackingCode}
+                          </span>
                         )}
                       </div>
                       <span className="font-bold text-[var(--text)]">${order.finalTotal.toLocaleString()}</span>
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Order Detail Modal */}
+            {selectedOrder && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedOrder(null)}>
+                <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                  <div className="sticky top-0 bg-white border-b border-[var(--border)] px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                    <div>
+                      <h3 className="text-lg font-bold text-[var(--text)]">Orden #{selectedOrder.id.slice(-6)}</h3>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {new Date(selectedOrder.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <button onClick={() => setSelectedOrder(null)} className="p-2 rounded-lg hover:bg-[var(--bg-soft)] transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-6">
+                    {/* Status */}
+                    <div>
+                      <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Estado</label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'pending', label: 'Pendiente', color: 'warning' },
+                          { value: 'approved', label: 'Aprobado', color: 'success' },
+                          { value: 'rejected', label: 'Rechazado', color: 'danger' },
+                        ].map(s => (
+                          <button
+                            key={s.value}
+                            onClick={() => updateOrderStatus(selectedOrder.id, s.value)}
+                            disabled={updatingOrder}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                              selectedOrder.status === s.value
+                                ? s.color === 'success' ? 'bg-[var(--success)] text-white' :
+                                  s.color === 'danger' ? 'bg-[var(--danger)] text-white' :
+                                  'bg-[var(--warning)] text-white'
+                                : 'bg-[var(--bg-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div>
+                      <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Cliente</label>
+                      <div className="bg-[var(--bg-soft)] rounded-xl p-4 space-y-1">
+                        {(selectedOrder as any).customerName && <p className="text-sm"><span className="text-[var(--text-muted)]">Nombre:</span> {(selectedOrder as any).customerName}</p>}
+                        {(selectedOrder as any).customerDni && <p className="text-sm"><span className="text-[var(--text-muted)]">DNI:</span> {(selectedOrder as any).customerDni}</p>}
+                        {(selectedOrder as any).customerEmail && <p className="text-sm"><span className="text-[var(--text-muted)]">Email:</span> {(selectedOrder as any).customerEmail}</p>}
+                        {(selectedOrder as any).customerPhone && <p className="text-sm"><span className="text-[var(--text-muted)]">Teléfono:</span> {(selectedOrder as any).customerPhone}</p>}
+                        {(selectedOrder as any).customerAddress && <p className="text-sm"><span className="text-[var(--text-muted)]">Dirección:</span> {(selectedOrder as any).customerAddress}</p>}
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div>
+                      <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Productos</label>
+                      <div className="space-y-2">
+                        {selectedOrder.items.map((item, i) => (
+                          <div key={i} className="flex justify-between items-center bg-[var(--bg-soft)] rounded-lg px-4 py-2">
+                            <span className="text-sm">{item.name} x {item.quantity}</span>
+                            <span className="text-sm font-medium">${((item as any).price || 0 * item.quantity).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tracking */}
+                    <div>
+                      <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Seguimiento</label>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-[var(--text-muted)] mb-1 block">Courier</label>
+                            <select
+                              value={orderCourier}
+                              onChange={e => setOrderCourier(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                            >
+                              <option value="">Seleccionar</option>
+                              <option value="Correo Argentino">Correo Argentino</option>
+                              <option value="OCA">OCA</option>
+                              <option value="Andreani">Andreani</option>
+                              <option value="Mercado Envíos">Mercado Envíos</option>
+                              <option value="Otro">Otro</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-[var(--text-muted)] mb-1 block">Código de seguimiento</label>
+                            <input
+                              type="text"
+                              value={orderTrackingCode}
+                              onChange={e => setOrderTrackingCode(e.target.value)}
+                              placeholder="Ej: 1234567890"
+                              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--accent)]"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-[var(--text-muted)] mb-1 block">Notas</label>
+                          <textarea
+                            value={orderNotes}
+                            onChange={e => setOrderNotes(e.target.value)}
+                            placeholder="Notas internas sobre la orden..."
+                            rows={2}
+                            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-soft)] border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--accent)] resize-none"
+                          />
+                        </div>
+                        <button
+                          onClick={updateOrderTracking}
+                          disabled={updatingOrder}
+                          className="px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50"
+                        >
+                          {updatingOrder ? 'Guardando...' : 'Guardar seguimiento'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tracking Status Timeline */}
+                    {selectedOrder.status === 'approved' && (
+                      <div>
+                        <label className="text-sm font-medium text-[var(--text-secondary)] mb-2 block">Estado de envío</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { value: '', label: 'Sin tracking' },
+                            { value: 'confirmed', label: 'Confirmado' },
+                            { value: 'preparing', label: 'En preparación' },
+                            { value: 'shipped', label: 'En camino' },
+                            { value: 'delivered', label: 'Entregado' },
+                          ].map(s => (
+                            <button
+                              key={s.value}
+                              onClick={async () => {
+                                if (s.value) {
+                                  await fetch('/api/orders/tracking', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: selectedOrder.id, trackingStatus: s.value }),
+                                  });
+                                  await fetchData();
+                                  setSelectedOrder(prev => prev ? { ...prev, trackingStatus: s.value } as any : null);
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                selectedOrder.trackingStatus === s.value
+                                  ? 'bg-[var(--accent)] text-white'
+                                  : 'bg-[var(--bg-soft)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]'
+                              }`}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="border-t border-[var(--border)] pt-4 flex justify-between items-center">
+                      <span className="text-sm text-[var(--text-muted)]">Total</span>
+                      <span className="text-xl font-bold text-[var(--text)]">${selectedOrder.finalTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
