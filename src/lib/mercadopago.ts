@@ -25,6 +25,11 @@ export async function createPreference(
       back_urls: backUrls,
       auto_return: 'approved',
       external_reference: externalReference,
+      statement_descriptor: 'GRANA 3D',
+      payer: {
+        name: 'Cliente',
+        email: 'ventas@grana3d.com.ar',
+      },
     },
   });
 
