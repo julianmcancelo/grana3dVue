@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import OpenAI from 'openai';
+import { checkRateLimit, getIp } from '@/lib/rate-limit';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -16,7 +17,6 @@ INFORMACIÓN DE CONTACTO DE LA TIENDA:
 - Instagram: @grana.3d
 - WhatsApp: +54 9 11 2635-4636
 - Web: grana3d.com.ar
-- Email: jcancelo.dev@gmail.com
 
 CONTEXTO ACTUAL:
 {context}
@@ -108,7 +108,26 @@ function getOrdersSnippet(orders: any[]) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getIp(request);
+    const rateKey = `assistant:${ip}`;
+    const limit = checkRateLimit(rateKey, 5);
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { text: 'Estás enviando mensajes muy rápido. Esperá un momento antes de intentar de nuevo.', action: { action: 'none' } },
+        { status: 429 }
+      );
+    }
+
     const { message, history, context } = await request.json();
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return NextResponse.json({ text: '¿En qué te puedo ayudar?', action: { action: 'none' } });
+    }
+
+    if (message.length > 2000) {
+      return NextResponse.json({ text: 'Tu mensaje es muy largo. ¿Podés resumirlo?', action: { action: 'none' } });
+    }
 
     const products = context?.products || [];
     const cart = context?.cart || [];

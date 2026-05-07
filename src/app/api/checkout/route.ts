@@ -3,9 +3,19 @@ import { adminDb } from '@/lib/firebase-admin';
 import { createPreference } from '@/lib/mercadopago';
 import { sendOrderConfirmation, sendAdminNotification } from '@/lib/whatsapp';
 import { checkoutSchema } from '@/lib/validation';
+import { FieldValue, Transaction } from 'firebase-admin/firestore';
+import { checkRateLimit, getIp } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getIp(request);
+    const rateKey = `checkout:${ip}`;
+    const limit = checkRateLimit(rateKey, 3);
+
+    if (!limit.allowed) {
+      return NextResponse.json({ error: 'Demasiados intentos. Esperá un momento.' }, { status: 429 });
+    }
+
     const body = await request.json();
     const validation = checkoutSchema.safeParse(body);
 
@@ -18,7 +28,7 @@ export async function POST(request: NextRequest) {
     const productsSnap = await adminDb.collection('products').get();
     const products = productsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
 
-    const orderItems = [];
+    const orderItems: { productId: string; name: string; quantity: number; price: number }[] = [];
     for (const item of items) {
       const product = products.find(p => p.id === item.productId);
       if (!product) {
@@ -40,50 +50,79 @@ export async function POST(request: NextRequest) {
 
     const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    let discount = 0;
-    let couponId = '';
+    let couponDocRef = null;
+    let couponData: any = null;
+
     if (couponCode) {
       const couponsSnap = await adminDb.collection('coupons').where('code', '==', couponCode.toUpperCase()).where('active', '==', true).get();
       if (!couponsSnap.empty) {
-        const coupon = couponsSnap.docs[0].data() as any;
+        couponDocRef = couponsSnap.docs[0].ref;
+        couponData = couponsSnap.docs[0].data() as any;
 
-        if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        if (couponData.expiresAt && new Date(couponData.expiresAt) < new Date()) {
           return NextResponse.json({ error: 'El cupon ha expirado' }, { status: 400 });
         }
 
-        if (coupon.maxUses > 0 && coupon.usedCount >= coupon.maxUses) {
-          return NextResponse.json({ error: 'El cupon alcanzo el limite de usos' }, { status: 400 });
+        if (couponData.minPurchase > 0 && subtotal < couponData.minPurchase) {
+          return NextResponse.json({ error: `Compra minima de $${couponData.minPurchase.toLocaleString()} para este cupon` }, { status: 400 });
         }
-
-        if (coupon.minPurchase > 0 && subtotal < coupon.minPurchase) {
-          return NextResponse.json({ error: `Compra minima de $${coupon.minPurchase.toLocaleString()} para este cupon` }, { status: 400 });
-        }
-
-        discount = Math.min(coupon.discount, 90);
-        couponId = couponsSnap.docs[0].id;
       }
     }
 
-    const discountAmount = subtotal * (discount / 100);
-    const finalTotal = Math.max(subtotal - discountAmount, 0);
+    const result = await adminDb.runTransaction(async (transaction: Transaction) => {
+      let discount = 0;
+      let resolvedCouponId = '';
 
-    const orderRef = await adminDb.collection('orders').add({
-      items: orderItems,
-      total: subtotal,
-      discount,
-      finalTotal,
-      couponCode: couponCode || null,
-      couponId: couponId || null,
-      status: 'pending',
-      trackingStatus: null,
-      mpPaymentId: null,
-      customerName: customerName.trim().slice(0, 100),
-      customerEmail: customerEmail.toLowerCase().trim().slice(0, 200),
-      customerDni: customerDni.replace(/\D/g, '').slice(0, 10),
-      customerPhone: customerPhone ? customerPhone.replace(/\D/g, '').slice(0, 15) : null,
-      createdAt: new Date().toISOString(),
-      updatedAt: null,
+      if (couponDocRef && couponData) {
+        const couponSnap = await transaction.get(couponDocRef);
+        if (!couponSnap.exists) {
+          throw new Error('Cupon no encontrado');
+        }
+
+        const currentCoupon = couponSnap.data() as any;
+
+        if (!currentCoupon.active) {
+          throw new Error('Cupon desactivado');
+        }
+
+        if (currentCoupon.maxUses > 0 && currentCoupon.usedCount >= currentCoupon.maxUses) {
+          throw new Error('Cupon agotado');
+        }
+
+        discount = Math.min(currentCoupon.discount, 90);
+        resolvedCouponId = couponDocRef.id;
+
+        transaction.update(couponDocRef, {
+          usedCount: FieldValue.increment(1),
+        });
+      }
+
+      const discountAmount = subtotal * (discount / 100);
+      const finalTotal = Math.max(subtotal - discountAmount, 0);
+
+      const orderRef = adminDb.collection('orders').doc();
+      transaction.set(orderRef, {
+        items: orderItems,
+        total: subtotal,
+        discount,
+        finalTotal,
+        couponCode: couponCode || null,
+        couponId: resolvedCouponId || null,
+        status: 'pending',
+        trackingStatus: null,
+        mpPaymentId: null,
+        customerName: customerName.trim().slice(0, 100),
+        customerEmail: customerEmail.toLowerCase().trim().slice(0, 200),
+        customerDni: customerDni.replace(/\D/g, '').slice(0, 10),
+        customerPhone: customerPhone ? customerPhone.replace(/\D/g, '').slice(0, 15) : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: null,
+      });
+
+      return { orderId: orderRef.id, discount, finalTotal, couponId: resolvedCouponId };
     });
+
+    const { orderId, discount, finalTotal, couponId } = result;
 
     const preferenceItems = orderItems.map(item => ({
       id: item.productId,
@@ -96,20 +135,20 @@ export async function POST(request: NextRequest) {
       preferenceItems.push({
         id: 'discount',
         title: `Descuento (${couponCode})`,
-        unitPrice: -discountAmount,
+        unitPrice: -(subtotal * (discount / 100)),
         quantity: 1,
       });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.grana3d.com.ar';
     const preference = await createPreference(preferenceItems, {
-      success: `${baseUrl}/success?order_id=${orderRef.id}`,
-      pending: `${baseUrl}/success?order_id=${orderRef.id}`,
-      failure: `${baseUrl}/success?order_id=${orderRef.id}`,
-    }, orderRef.id);
+      success: `${baseUrl}/success?order_id=${orderId}`,
+      pending: `${baseUrl}/success?order_id=${orderId}`,
+      failure: `${baseUrl}/success?order_id=${orderId}`,
+    }, orderId);
 
     const orderData = {
-      id: orderRef.id,
+      id: orderId,
       customerName: customerName || 'Cliente',
       items: orderItems,
       total: subtotal,
@@ -122,9 +161,12 @@ export async function POST(request: NextRequest) {
     }
     sendAdminNotification(orderData).catch(err => console.error('WhatsApp admin notification failed:', err));
 
-    return NextResponse.json({ orderId: orderRef.id, preferenceId: preference.id, initPoint: preference.init_point });
+    return NextResponse.json({ orderId, preferenceId: preference.id, initPoint: preference.init_point });
   } catch (error: any) {
     console.error('Checkout error:', error);
+    if (error.message === 'Cupon agotado' || error.message === 'Cupon desactivado' || error.message === 'Cupon no encontrado') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: error.message || 'Error al procesar' }, { status: 500 });
   }
 }
