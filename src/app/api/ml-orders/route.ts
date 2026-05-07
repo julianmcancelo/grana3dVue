@@ -26,8 +26,17 @@ export async function GET(request: NextRequest) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    if (ordersRes.status === 403) {
+      return NextResponse.json({
+        error: 'Sin permisos',
+        message: 'El token no tiene permisos para leer órdenes. Necesitás una app de ML con scope de "Gestión de ventas" autorizada.',
+        help: 'Andá a developers.mercadolibre.com, creá una app, y autorizala con tu cuenta de vendedor.',
+      }, { status: 403 });
+    }
+
     if (!ordersRes.ok) {
-      return NextResponse.json({ error: 'Error al obtener ordenes de ML' }, { status: 500 });
+      const errorData = await ordersRes.json().catch(() => ({}));
+      return NextResponse.json({ error: errorData.message || 'Error al obtener ordenes de ML' }, { status: 500 });
     }
 
     const ordersData = await ordersRes.json();

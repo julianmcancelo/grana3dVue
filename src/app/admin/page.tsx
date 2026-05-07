@@ -84,17 +84,24 @@ export default function AdminPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const [mlOrdersError, setMlOrdersError] = useState<string | null>(null);
+
   const fetchMLOrders = async () => {
     if (!mlToken) return;
     setMlOrdersLoading(true);
+    setMlOrdersError(null);
     try {
       const res = await fetch(`/api/ml-orders?token=${mlToken}`);
       const data = await res.json();
-      if (Array.isArray(data)) {
+      if (res.status === 403) {
+        setMlOrdersError(data.message || 'Sin permisos para leer órdenes');
+      } else if (Array.isArray(data)) {
         setMlOrders(data);
+      } else if (data.error) {
+        setMlOrdersError(data.error);
       }
     } catch (e) {
-      console.error('Error fetching ML orders:', e);
+      setMlOrdersError('Error de conexión');
     } finally {
       setMlOrdersLoading(false);
     }
@@ -1224,6 +1231,34 @@ export default function AdminPage() {
                   className="px-6 py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
                 >
                   {mlOrdersLoading ? 'Cargando...' : 'Cargar ventas'}
+                </button>
+                <p className="text-xs text-[var(--text-muted)] mt-4 max-w-md mx-auto">
+                  Necesitás un token con permisos de "Gestión de ventas". Creá una app en developers.mercadolibre.com y autorizala.
+                </p>
+              </div>
+            ) : mlOrdersError ? (
+              <div className="bg-white border border-[var(--border)] rounded-xl p-8 text-center">
+                <div className="w-12 h-12 rounded-full bg-[var(--danger-soft)] mx-auto mb-4 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[var(--danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                  </svg>
+                </div>
+                <h3 className="text-sm font-semibold text-[var(--text)] mb-2">No se pudieron cargar las ventas</h3>
+                <p className="text-xs text-[var(--text-muted)] mb-4 max-w-md mx-auto">{mlOrdersError}</p>
+                <div className="bg-[var(--bg-soft)] rounded-xl p-4 mb-4 text-left max-w-md mx-auto">
+                  <p className="text-xs font-medium text-[var(--text)] mb-2">Para solucionarlo:</p>
+                  <ol className="text-xs text-[var(--text-muted)] space-y-1 list-decimal list-inside">
+                    <li>Andá a <a href="https://developers.mercadolibre.com" target="_blank" className="text-[var(--accent)] underline">developers.mercadolibre.com</a></li>
+                    <li>Creá una aplicación</li>
+                    <li>Autorizala con tu cuenta de vendedor</li>
+                    <li>Copiá el access token y pegalo acá</li>
+                  </ol>
+                </div>
+                <button
+                  onClick={() => { setMlToken(''); setMlOrdersError(null); }}
+                  className="text-xs text-[var(--accent)] hover:underline"
+                >
+                  Cambiar token
                 </button>
               </div>
             ) : (
