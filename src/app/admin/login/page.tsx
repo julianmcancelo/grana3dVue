@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import Footer from '@/components/Footer';
 
 const ADMIN_EMAILS = [
   'jcancelo.dev@gmail.com',
@@ -40,9 +41,9 @@ export default function AdminLogin() {
       if (err.code === 'auth/popup-closed-by-user') {
         setError('');
       } else if (err.code === 'auth/popup-blocked') {
-        setError('Permití las ventanas emergentes para este sitio');
+        setError('Permiti las ventanas emergentes para este sitio');
       } else {
-        setError('Error al iniciar sesión. Intentá de nuevo.');
+        setError('Error al iniciar sesion. Intentalo de nuevo.');
       }
     }
     setSigningIn(false);
@@ -50,7 +51,7 @@ export default function AdminLogin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-soft)]">
+      <div className="min-h-screen flex flex-col bg-white items-center justify-center">
         <svg className="animate-spin w-8 h-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -60,21 +61,15 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-soft)]">
-      {/* Background decoration */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-[0.03]" style={{ background: '#e17055' }}/>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full opacity-[0.03]" style={{ background: '#00cec9' }}/>
-      </div>
-
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
-      <header className="relative z-10 border-b border-[var(--border)] bg-white/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex justify-between items-center h-14">
+      <header className="border-b border-[var(--border)] bg-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
             <a href="/landing" className="flex items-center gap-2.5">
               <img src="/logo-grana3d.png" alt="Grana 3D" className="h-8 w-auto"/>
             </a>
-            <a href="/tienda" className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+            <a href="/tienda" className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
               Volver a la tienda
             </a>
           </div>
@@ -82,21 +77,19 @@ export default function AdminLogin() {
       </header>
 
       {/* Main */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
+      <main className="flex-1 flex items-center justify-center px-6 py-16 sm:py-20">
         <div className="w-full max-w-sm">
           {/* Logo & Title */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3 rounded-2xl mb-4" style={{ background: 'linear-gradient(135deg, #e17055/10, #00cec9/10)' }}>
-              <img src="/logo-grana3d.png" alt="Grana 3D" className="h-16 w-auto"/>
-            </div>
+            <img src="/logo-grana3d.png" alt="Grana 3D" className="h-16 w-auto mx-auto mb-4"/>
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-              Panel de <span style={{ color: '#e17055' }}>administración</span>
+              Panel de <span style={{ color: '#e17055' }}>administracion</span>
             </h1>
-            <p className="text-[var(--text-muted)] text-sm mt-2">Ingresá con tu cuenta autorizada</p>
+            <p className="text-[var(--text-muted)] text-sm mt-2">Ingresa con tu cuenta autorizada</p>
           </div>
 
           {/* Login Card */}
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
             <button
               onClick={handleGoogleLogin}
               disabled={signingIn}
@@ -133,13 +126,10 @@ export default function AdminLogin() {
               </p>
             </div>
           </div>
-
-          {/* Footer info */}
-          <p className="text-center text-[10px] text-[var(--text-muted)] mt-6">
-            Grana 3D · Impresión 3D de calidad
-          </p>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

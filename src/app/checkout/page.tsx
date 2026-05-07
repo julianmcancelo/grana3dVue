@@ -5,6 +5,7 @@ import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
+import Footer from '@/components/Footer';
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
@@ -31,11 +32,26 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-[var(--text-secondary)] font-medium">Tu carrito está vacío</p>
-          <a href="/tienda" className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">Volver a la tienda</a>
+      <div className="min-h-screen flex flex-col bg-white">
+        <header className="border-b border-[var(--border)] bg-white">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="flex justify-between items-center h-16">
+              <a href="/landing" className="flex items-center gap-2.5">
+                <img src="/logo-grana3d.png" alt="Grana 3D" className="h-8 w-auto"/>
+              </a>
+              <a href="/tienda" className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+                Ir a la tienda
+              </a>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-[var(--text-secondary)] font-medium">Tu carrito esta vacio</p>
+            <a href="/tienda" className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline">Volver a la tienda</a>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -52,10 +68,10 @@ export default function CheckoutPage() {
         setCouponDiscount(data.discount);
         setError('');
       } else {
-        setError(data.error || 'Cupón inválido');
+        setError(data.error || 'Cupon invalido');
       }
     } catch {
-      setError('Error al validar cupón');
+      setError('Error al validar cupon');
     }
   };
 
@@ -87,51 +103,62 @@ export default function CheckoutPage() {
         setError(data.error || 'Error al procesar el pago');
       }
     } catch {
-      setError('Error de conexión');
+      setError('Error de conexion');
     }
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-soft)]">
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[var(--border)]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex justify-between items-center h-14">
-          <a href="/tienda" className="flex items-center gap-2.5">
-            <img src="/logo-grana3d.png" alt="Grana 3D" className="h-7 w-auto"/>
-          </a>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <button
-                onClick={() => setShowProfile(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--border)] hover:bg-[var(--bg-soft)] transition-colors text-sm"
-              >
-                <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-[10px] font-bold">
-                  {(user.displayName || user.email || '?')[0].toUpperCase()}
-                </div>
-                <span className="hidden sm:inline text-[var(--text-secondary)]">{user.displayName || user.email?.split('@')[0]}</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="px-3 py-1.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors"
-              >
-                Ingresar
-              </button>
-            )}
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Header */}
+      <header className="border-b border-[var(--border)] bg-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            <a href="/landing" className="flex items-center gap-2.5">
+              <img src="/logo-grana3d.png" alt="Grana 3D" className="h-8 w-auto"/>
+            </a>
+
+            <div className="flex items-center gap-3">
+              {user ? (
+                <button
+                  onClick={() => setShowProfile(true)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full border border-[var(--border)] hover:bg-[var(--bg-soft)] transition-colors text-sm"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs font-bold">
+                    {(user.displayName || user.email || '?')[0].toUpperCase()}
+                  </div>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="px-4 py-2 rounded-full bg-[var(--text)] text-white text-sm font-medium hover:bg-[var(--accent)] transition-colors"
+                >
+                  Ingresar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto py-10 px-4">
-        <a href="/tienda" className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-6 inline-block">← Volver a la tienda</a>
-        <h1 className="text-2xl font-bold mb-6">Finalizar compra</h1>
+      <main className="flex-1 max-w-2xl mx-auto px-6 py-16 sm:py-20 w-full">
+        {/* Title */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text)]">
+            Finalizar compra
+          </h1>
+          <p className="mt-3 text-[var(--text-secondary)] text-base">
+            Revisa tu pedido y completa tus datos
+          </p>
+        </div>
 
-        <div className="bg-white rounded-2xl border border-[var(--border)] p-6 mb-6">
+        {/* Order Summary */}
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-6 mb-6">
           <h2 className="font-semibold mb-4">Tu pedido</h2>
           <div className="space-y-3">
             {items.map(item => (
               <div key={item.product.id} className="flex justify-between text-sm">
-                <span className="text-[var(--text-secondary)]">{item.product.name} × {item.quantity}</span>
+                <span className="text-[var(--text-secondary)]">{item.product.name} x {item.quantity}</span>
                 <span className="font-medium">${(item.product.price * item.quantity).toLocaleString()}</span>
               </div>
             ))}
@@ -151,7 +178,8 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[var(--border)] p-6 space-y-4">
+        {/* Checkout Form */}
+        <form onSubmit={handleSubmit} className="bg-white border border-[var(--border)] rounded-2xl p-6 space-y-4">
           <h2 className="font-semibold">Datos de contacto</h2>
 
           <input
@@ -191,7 +219,7 @@ export default function CheckoutPage() {
               type="text"
               value={coupon}
               onChange={e => setCoupon(e.target.value.toUpperCase())}
-              placeholder="Cupón de descuento"
+              placeholder="Cupon de descuento"
               className="flex-1 px-4 py-2.5 rounded-full border border-[var(--border)] text-sm focus:outline-none focus:border-[var(--accent)]"
             />
             <button
@@ -208,7 +236,7 @@ export default function CheckoutPage() {
           <button
             type="submit"
             disabled={loading || !name || !email || !dni}
-            className="w-full py-3 rounded-full bg-[var(--accent)] text-white font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+            className="w-full py-3 rounded-full bg-[var(--text)] text-white font-semibold hover:bg-[var(--accent)] disabled:opacity-50 transition-colors"
           >
             {loading ? 'Procesando...' : `Pagar $${finalTotal.toLocaleString()} con Mercado Pago`}
           </button>
@@ -219,12 +247,13 @@ export default function CheckoutPage() {
               onClick={() => setShowAuth(true)}
               className="w-full text-center text-xs text-[var(--accent)] hover:underline"
             >
-              ¿Querés agilizar futuras compras? Ingresá ahora
+              Queres agilizar futuras compras? Ingresa ahora
             </button>
           )}
         </form>
-      </div>
+      </main>
 
+      <Footer />
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} />}
     </div>

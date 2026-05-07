@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Order, TrackingStatus } from '@/lib/types';
+import Footer from '@/components/Footer';
 
 const trackingSteps: { key: TrackingStatus; label: string; sublabel: string; icon: string }[] = [
   { key: 'confirmed', label: 'Confirmado', sublabel: 'Pedido registrado', icon: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -68,23 +69,34 @@ export default function TrackingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-soft)]">
-      <div className="bg-white border-b border-[var(--border)]">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          <a href="/tienda" className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors mb-4">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-            </svg>
-            Volver a la tienda
-          </a>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Seguimiento de pedido</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">Busca por orden, DNI o email</p>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Header */}
+      <header className="border-b border-[var(--border)] bg-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex justify-between items-center h-16">
+            <a href="/landing" className="flex items-center gap-2.5">
+              <img src="/logo-grana3d.png" alt="Grana 3D" className="h-8 w-auto"/>
+            </a>
+            <a href="/tienda" className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
+              Ir a la tienda
+            </a>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <main className="flex-1 max-w-3xl mx-auto px-6 py-16 sm:py-20 w-full">
+        {/* Title */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--text)]">
+            Seguimiento de pedido
+          </h1>
+          <p className="mt-3 text-[var(--text-secondary)] text-base">
+            Busca por orden, DNI o email
+          </p>
+        </div>
+
         {!selectedOrder && (
-          <form onSubmit={handleSearch} className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+          <form onSubmit={handleSearch} className="bg-white border border-[var(--border)] rounded-2xl p-6">
             <div className="flex gap-1 bg-[var(--bg-soft)] rounded-xl p-1 mb-4">
               {[
                 { key: 'order' as const, label: 'N de orden' },
@@ -111,12 +123,12 @@ export default function TrackingPage() {
                   else setSearchValue(e.target.value);
                 }}
                 placeholder={searchType === 'dni' ? 'Ej: 12345678' : searchType === 'email' ? 'tu@email.com' : 'Ej: abc123...'}
-                className="flex-1 px-4 py-3 rounded-xl border border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent text-sm"
+                className="flex-1 px-4 py-3 rounded-xl border border-[var(--border)] focus:outline-none focus:border-[var(--accent)] text-sm"
               />
               <button
                 type="submit"
                 disabled={loading || !searchValue.trim()}
-                className="px-6 py-3 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 rounded-xl bg-[var(--text)] text-white font-medium text-sm hover:bg-[var(--accent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -135,7 +147,7 @@ export default function TrackingPage() {
         {selectedOrder && (
           <div className="space-y-6">
             {/* Order Header */}
-            <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <p className="text-xs text-[var(--text-muted)] font-mono">Orden #{selectedOrder.id.slice(-6)}</p>
@@ -167,7 +179,7 @@ export default function TrackingPage() {
 
             {/* Tracking Timeline */}
             {selectedOrder.trackingStatus && (
-              <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+              <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
                 <h3 className="font-semibold text-[var(--text)] mb-6">Estado del envio</h3>
                 <div className="relative">
                   <div className="absolute top-6 left-0 right-0 h-0.5 bg-[var(--border)]" />
@@ -212,7 +224,7 @@ export default function TrackingPage() {
             )}
 
             {/* Order Summary */}
-            <div className="bg-white border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-6">
               <h3 className="font-semibold text-[var(--text)] mb-4">Resumen del pedido</h3>
               {selectedOrder.items.map((item, i) => (
                 <div key={i} className="flex justify-between items-center py-3 border-b border-[var(--border)] last:border-0">
@@ -289,7 +301,9 @@ export default function TrackingPage() {
             })}
           </div>
         )}
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }
