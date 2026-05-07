@@ -4,7 +4,11 @@ export default function Footer() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <img src="/logo-grana3d.png" alt="Grana 3D" className="h-7 w-auto"/>
+            <img src="/logo-grana3d.png" alt="Grana 3D" className="h-6 w-auto"/>
+            <div>
+              <span className="text-sm font-bold text-[var(--text)]">Grana</span>
+              <span className="text-sm font-light text-[var(--text-secondary)] ml-0.5">3D</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
