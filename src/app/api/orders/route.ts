@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 
+const ALLOWED_ORDER_FIELDS = ['status', 'trackingStatus', 'trackingCode', 'courier', 'notes'];
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -8,6 +10,10 @@ export async function GET(request: NextRequest) {
     const dni = searchParams.get('dni');
     const email = searchParams.get('email');
     const status = searchParams.get('status');
+
+    if (orderId && !/^[a-zA-Z0-9]+$/.test(orderId)) {
+      return NextResponse.json({ error: 'Invalid order ID' }, { status: 400 });
+    }
 
     if (orderId) {
       const doc = await adminDb.collection('orders').doc(orderId).get();
@@ -18,11 +24,14 @@ export async function GET(request: NextRequest) {
     }
 
     let query: any = adminDb.collection('orders');
-    
+
     if (status && status !== 'all') {
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
       query = query.where('status', '==', status);
     }
-    
+
     if (email) {
       query = query.where('customerEmail', '==', email);
     } else if (dni) {
@@ -55,21 +64,55 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
     }
 
+    if (!/^[a-zA-Z0-9]+$/.test(id)) {
+      return NextResponse.json({ error: 'Invalid order ID' }, { status: 400 });
+    }
+
+    const filteredUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (!ALLOWED_ORDER_FIELDS.includes(key)) {
+        continue;
+      }
+      filteredUpdates[key] = value;
+    }
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    if (filteredUpdates.status && !['pending', 'approved', 'rejected'].includes(filteredUpdates.status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+
+    if (filteredUpdates.trackingStatus && !['confirmed', 'preparing', 'shipped', 'delivered'].includes(filteredUpdates.trackingStatus)) {
+      return NextResponse.json({ error: 'Invalid tracking status' }, { status: 400 });
+    }
+
+    if (filteredUpdates.trackingCode) {
+      filteredUpdates.trackingCode = String(filteredUpdates.trackingCode).trim().slice(0, 100);
+    }
+
+    if (filteredUpdates.courier) {
+      filteredUpdates.courier = String(filteredUpdates.courier).trim().slice(0, 100);
+    }
+
+    if (filteredUpdates.notes) {
+      filteredUpdates.notes = String(filteredUpdates.notes).trim().slice(0, 2000);
+    }
+
     const orderRef = adminDb.collection('orders').doc(id);
     const orderDoc = await orderRef.get();
-    
+
     if (!orderDoc.exists) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    // Build update object with updatedAt
     const updateData: any = {
-      ...updates,
+      ...filteredUpdates,
       updatedAt: new Date().toISOString(),
     };
 
-    // If status changed to approved, set trackingStatus to confirmed if not set
-    if (updates.status === 'approved' && !orderDoc.data()?.trackingStatus) {
+    if (filteredUpdates.status === 'approved' && !orderDoc.data()?.trackingStatus) {
       updateData.trackingStatus = 'confirmed';
     }
 

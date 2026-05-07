@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { productSchema } from '@/lib/validation';
+import { z } from 'zod';
 
 export async function GET() {
   try {
@@ -15,27 +17,30 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = productSchema.safeParse(body);
 
-    if (!body.name || !body.price) {
-      return NextResponse.json({ error: 'Nombre y precio son requeridos' }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Datos invalidos', details: validation.error.issues }, { status: 400 });
     }
 
+    const { name, description, price, stock, image } = validation.data;
+
     const docRef = await adminDb.collection('products').add({
-      name: body.name,
-      description: body.description || '',
-      price: Number(body.price),
-      stock: Number(body.stock) || 0,
-      image: body.image || '',
+      name: name.trim().slice(0, 200),
+      description: (description || '').trim().slice(0, 2000),
+      price,
+      stock,
+      image: (image || '').slice(0, 5000000),
       createdAt: new Date().toISOString(),
     });
 
-    return NextResponse.json({ 
-      id: docRef.id, 
-      name: body.name, 
-      price: Number(body.price),
-      description: body.description || '',
-      stock: Number(body.stock) || 0,
-      image: body.image || '',
+    return NextResponse.json({
+      id: docRef.id,
+      name,
+      price,
+      description: description || '',
+      stock,
+      image: image || '',
       createdAt: new Date().toISOString(),
     }, { status: 201 });
   } catch (error: any) {
@@ -47,16 +52,29 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
+
     if (!body.id) {
       return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
     }
 
     const updateData: Record<string, any> = {};
-    if (body.name !== undefined) updateData.name = body.name;
-    if (body.description !== undefined) updateData.description = body.description;
-    if (body.price !== undefined) updateData.price = Number(body.price);
-    if (body.stock !== undefined) updateData.stock = Number(body.stock);
-    if (body.image !== undefined) updateData.image = body.image;
+    if (body.name !== undefined) updateData.name = String(body.name).trim().slice(0, 200);
+    if (body.description !== undefined) updateData.description = String(body.description).trim().slice(0, 2000);
+    if (body.price !== undefined) {
+      const price = Number(body.price);
+      if (isNaN(price) || price <= 0 || price > 999999999) {
+        return NextResponse.json({ error: 'Precio invalido' }, { status: 400 });
+      }
+      updateData.price = price;
+    }
+    if (body.stock !== undefined) {
+      const stock = Number(body.stock);
+      if (isNaN(stock) || stock < 0 || stock > 99999) {
+        return NextResponse.json({ error: 'Stock invalido' }, { status: 400 });
+      }
+      updateData.stock = stock;
+    }
+    if (body.image !== undefined) updateData.image = String(body.image).slice(0, 5000000);
 
     await adminDb.collection('products').doc(body.id).update(updateData);
     return NextResponse.json({ success: true });
