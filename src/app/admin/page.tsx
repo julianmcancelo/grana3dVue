@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Product, Coupon, Order, Customer } from '@/lib/types';
+import { Product, Coupon, Order, Customer, MLOrder } from '@/lib/types';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Footer from '@/components/Footer';
 
-type Tab = 'dashboard' | 'products' | 'coupons' | 'orders' | 'customers' | 'support';
+type Tab = 'dashboard' | 'products' | 'coupons' | 'orders' | 'ml-orders' | 'customers' | 'support';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -45,6 +45,8 @@ export default function AdminPage() {
   const [mlSelected, setMlSelected] = useState<string[]>([]);
   const [mlImporting, setMlImporting] = useState(false);
   const [mlToken, setMlToken] = useState('');
+  const [mlOrders, setMlOrders] = useState<MLOrder[]>([]);
+  const [mlOrdersLoading, setMlOrdersLoading] = useState(false);
 
   // Order management state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -81,6 +83,22 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const fetchMLOrders = async () => {
+    if (!mlToken) return;
+    setMlOrdersLoading(true);
+    try {
+      const res = await fetch(`/api/ml-orders?token=${mlToken}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setMlOrders(data);
+      }
+    } catch (e) {
+      console.error('Error fetching ML orders:', e);
+    } finally {
+      setMlOrdersLoading(false);
+    }
+  };
 
   // ML Import functions
   const loadMLItems = async () => {
@@ -409,6 +427,7 @@ export default function AdminPage() {
     { key: 'products', label: 'Productos' },
     { key: 'coupons', label: 'Cupones' },
     { key: 'orders', label: 'Ordenes' },
+    { key: 'ml-orders', label: 'ML Ventas' },
     { key: 'customers', label: 'Clientes' },
     { key: 'support', label: `Soporte${tickets.filter(t => t.status === 'pending').length > 0 ? ` (${tickets.filter(t => t.status === 'pending').length})` : ''}` },
   ];
@@ -1181,6 +1200,109 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ML Orders */}
+        {activeTab === 'ml-orders' && (
+          <div>
+            {!mlToken ? (
+              <div className="bg-white border border-[var(--border)] rounded-xl p-8 text-center">
+                <p className="text-sm text-[var(--text-muted)] mb-4">Ingresá tu access token de Mercado Libre para ver las ventas</p>
+                <textarea
+                  value={mlToken}
+                  onChange={e => setMlToken(e.target.value)}
+                  placeholder="APP_USR-..."
+                  rows={3}
+                  className="w-full max-w-md mx-auto border border-[var(--border)] rounded-xl p-3 text-sm font-mono focus:outline-none focus:border-[var(--accent)] resize-none mb-4"
+                />
+                <button
+                  onClick={fetchMLOrders}
+                  disabled={!mlToken.trim() || mlOrdersLoading}
+                  className="px-6 py-2.5 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+                >
+                  {mlOrdersLoading ? 'Cargando...' : 'Cargar ventas'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <button
+                    onClick={fetchMLOrders}
+                    disabled={mlOrdersLoading}
+                    className="px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors inline-flex items-center gap-2"
+                  >
+                    <svg className={`w-4 h-4 ${mlOrdersLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    {mlOrdersLoading ? 'Sincronizando...' : 'Sincronizar'}
+                  </button>
+                  <span className="text-xs text-[var(--text-muted)]">{mlOrders.length} ventas</span>
+                </div>
+
+                {mlOrdersLoading && mlOrders.length === 0 ? (
+                  <div className="bg-white border border-[var(--border)] rounded-xl p-16 text-center">
+                    <svg className="animate-spin w-8 h-8 text-[var(--accent)] mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <p className="text-sm text-[var(--text-muted)]">Cargando ventas de Mercado Libre...</p>
+                  </div>
+                ) : mlOrders.length === 0 ? (
+                  <div className="bg-white border border-[var(--border)] rounded-xl p-16 text-center">
+                    <p className="text-sm text-[var(--text-muted)]">No se encontraron ventas</p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-[var(--border)] rounded-xl overflow-hidden divide-y divide-[var(--border)]">
+                    {mlOrders.map((order: any) => {
+                      const statusColors: Record<string, string> = {
+                        paid: 'bg-[var(--warning-soft)] text-[var(--warning)]',
+                        processing: 'bg-[var(--accent-soft)] text-[var(--accent)]',
+                        shipped: 'bg-blue-50 text-blue-600',
+                        delivered: 'bg-[var(--success-soft)] text-[var(--success)]',
+                        cancelled: 'bg-[var(--danger-soft)] text-[var(--danger)]',
+                      };
+                      const statusLabels: Record<string, string> = {
+                        paid: 'Pagado',
+                        processing: 'En proceso',
+                        shipped: 'Enviado',
+                        delivered: 'Entregado',
+                        cancelled: 'Cancelado',
+                      };
+                      return (
+                        <div key={order.id} className="p-4 hover:bg-[var(--bg-soft)] transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono text-xs text-[var(--text-muted)]">ML #{order.mlOrderId}</span>
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[order.status] || 'bg-[var(--bg-muted)] text-[var(--text-muted)]'}`}>
+                                {statusLabels[order.status] || order.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-[var(--text-muted)]">
+                              {new Date(order.dateCreated).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {order.items.map((item: any, i: number) => (
+                              <span key={i} className="text-xs bg-[var(--bg-soft)] border border-[var(--border)] px-2.5 py-1 rounded-full">
+                                {item.name} × {item.quantity}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
+                              <span>{order.buyerName}</span>
+                              {order.buyerPhone && <span>{order.buyerPhone}</span>}
+                            </div>
+                            <span className="font-bold text-[var(--text)]">${order.total.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

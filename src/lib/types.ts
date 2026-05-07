@@ -53,6 +53,19 @@ export interface Order {
   updatedAt: string | null;
 }
 
+export interface MLOrder {
+  id: string;
+  mlOrderId: string;
+  buyerName: string;
+  buyerEmail: string | null;
+  buyerPhone: string | null;
+  items: { name: string; quantity: number; price: number }[];
+  total: number;
+  status: string;
+  dateCreated: string;
+  syncedAt: string;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
