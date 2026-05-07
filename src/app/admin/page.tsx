@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Product, Coupon, Order, Customer } from '@/lib/types';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import Footer from '@/components/Footer';
 
 type Tab = 'dashboard' | 'products' | 'coupons' | 'orders' | 'customers' | 'support';
 
@@ -1796,6 +1797,8 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

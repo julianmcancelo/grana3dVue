@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Footer from '@/components/Footer';
 
 const WHATSAPP_OPTIONS = [
   { label: 'Hacer un pedido', desc: 'Consultar productos disponibles', text: 'Hola! Quiero hacer un pedido. ¿Qué productos tienen disponibles?' },
@@ -136,14 +137,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className={`border-t border-[var(--border)] transition-all duration-700 delay-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="max-w-5xl mx-auto px-6 py-6">
-          <p className="text-center text-xs text-[var(--text-muted)]">
-            Grana 3D · Impresión 3D de calidad
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* WhatsApp Modal */}
       {waModal && (

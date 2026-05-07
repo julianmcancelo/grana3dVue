@@ -6,6 +6,7 @@ import ShoppingAssistant, { ShoppingAssistantRef } from '@/components/ShoppingAs
 import CartSidebar from '@/components/CartSidebar';
 import AuthModal from '@/components/AuthModal';
 import ProfilePanel from '@/components/ProfilePanel';
+import Footer from '@/components/Footer';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -291,14 +292,7 @@ function HomeContent() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--border)] mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6">
-          <p className="text-center text-xs text-[var(--text-muted)]">
-            Grana 3D · Impresión 3D de calidad
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       <ShoppingAssistant ref={assistantRef} products={products} />
       <CartSidebar />
