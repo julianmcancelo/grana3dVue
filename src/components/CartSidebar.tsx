@@ -34,7 +34,7 @@ export default function CartSidebar() {
               <div key={item.product.id} className="flex gap-3 p-3 rounded-xl bg-[var(--bg-soft)]">
                 <div className="w-20 h-20 rounded-lg bg-[var(--bg-muted)] overflow-hidden flex-shrink-0">
                   {item.product.image ? (
-                    <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover"/>
+                    <img src={item.product.image?.replace('http://', 'https://')} alt={item.product.name} className="w-full h-full object-cover"/>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <svg className="w-8 h-8 text-[var(--text-muted)]/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">

@@ -238,7 +238,7 @@ function HomeContent() {
                 <div className="relative aspect-square bg-[var(--bg-soft)] overflow-hidden">
                   {product.image ? (
                     <img
-                      src={product.image}
+                      src={product.image?.replace('http://', 'https://')}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

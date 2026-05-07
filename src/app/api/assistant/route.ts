@@ -108,6 +108,13 @@ function getOrdersSnippet(orders: any[]) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { text: 'El asistente no está disponible en este momento. Intentá de nuevo más tarde.', action: { action: 'none' } },
+        { status: 503 }
+      );
+    }
+
     const ip = getIp(request);
     const rateKey = `assistant:${ip}`;
     const limit = checkRateLimit(rateKey, 5);

@@ -745,7 +745,7 @@ export default function AdminPage() {
                     <div key={product.id} className="flex items-center gap-4 p-4 hover:bg-[var(--bg-soft)] transition-colors">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--bg-muted)] flex-shrink-0">
                         {product.image ? (
-                          <img src={product.image} alt={product.name} className="w-full h-full object-cover"/>
+                          <img src={product.image?.replace('http://', 'https://')} alt={product.name} className="w-full h-full object-cover"/>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <svg className="w-5 h-5 text-[var(--text-muted)]/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
