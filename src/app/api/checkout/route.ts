@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.grana3d.com.ar';
     const preference = await createPreference(preferenceItems, {
       success: `${baseUrl}/success?order_id=${orderRef.id}`,
       pending: `${baseUrl}/success?order_id=${orderRef.id}`,
